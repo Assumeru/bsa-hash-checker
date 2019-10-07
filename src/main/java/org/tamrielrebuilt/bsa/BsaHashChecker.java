@@ -85,8 +85,8 @@ public class BsaHashChecker implements Closeable {
 		file.seek(12 + hashOffset);
 		Map<Long, List<String>> count = new HashMap<>();
 		for(int i = 0; i < files; i++) {
-			long a = readInt();
-			long b = readInt();
+			long a = readInt() & 0xFFFFFFFFl;
+			long b = readInt() & 0xFFFFFFFFl;
 			long hash = (a << 32l) | b;
 			List<String> list = count.get(hash);
 			if(list == null) {
