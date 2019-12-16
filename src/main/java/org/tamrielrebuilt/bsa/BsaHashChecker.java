@@ -14,15 +14,19 @@ import java.util.Map;
 public class BsaHashChecker implements Closeable {
 	public static void main(String[] args) {
 		if(args.length == 0) {
-			System.out.println("Usage: [path to BSA]");
+			System.out.println("Usage: [path to BSA] [optional additional BSAs]");
 			System.exit(0);
 		}
-		try(BsaHashChecker checker = new BsaHashChecker(new File(args[0]))) {
-			checker.checkHashes();
-		} catch(Exception e) {
-			e.printStackTrace();
-			System.exit(1);
+		Map<Long, List<String>> count = new HashMap<>();
+		for(String path : args) {
+			try(BsaHashChecker checker = new BsaHashChecker(new File(path))) {
+				checker.checkHashes(count);
+			} catch(Exception e) {
+				e.printStackTrace();
+				System.exit(1);
+			}
 		}
+		count.values().stream().filter(v -> v.size() > 1).forEach(System.out::println);
 	}
 
 	private final RandomAccessFile file;
@@ -33,12 +37,12 @@ public class BsaHashChecker implements Closeable {
 		this.file = new RandomAccessFile(file, "r");
 	}
 
-	public void checkHashes() throws IOException {
+	public void checkHashes(Map<Long, List<String>> count) throws IOException {
 		readHeader();
 		skip(files * 8);
 		int[] offsets = readFileNameOffsets();
 		String[] names = readFileNames(offsets);
-		countHashes(names);
+		countHashes(names, count);
 	}
 
 	private void readHeader() throws IOException {
@@ -81,9 +85,8 @@ public class BsaHashChecker implements Closeable {
 		return names;
 	}
 
-	private void countHashes(String[] names) throws IOException {
+	private void countHashes(String[] names, Map<Long, List<String>> count) throws IOException {
 		file.seek(12 + hashOffset);
-		Map<Long, List<String>> count = new HashMap<>();
 		for(int i = 0; i < files; i++) {
 			long a = readInt() & 0xFFFFFFFFl;
 			long b = readInt() & 0xFFFFFFFFl;
@@ -95,7 +98,6 @@ public class BsaHashChecker implements Closeable {
 			}
 			list.add(names[i]);
 		}
-		count.values().stream().filter(v -> v.size() > 1).forEach(System.out::println);
 	}
 
 	private int readInt() throws IOException {
